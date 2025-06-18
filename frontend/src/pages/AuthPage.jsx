@@ -2,6 +2,8 @@ import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
+const API = process.env.REACT_APP_API_URL;
+
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ username: "", password: "" });
@@ -34,18 +36,17 @@ export default function AuthPage() {
 
     try {
       setLoading(true);
+      const endpoint = isLogin ? "login" : "register";
+
+      const res = await axios.post(`${API}/api/auth/${endpoint}`, {
+        username: formData.username,
+        password: formData.password,
+      });
+
       if (isLogin) {
-        const res = await axios.post("http://localhost:5000/api/auth/login", {
-          username: formData.username,
-          password: formData.password,
-        });
         localStorage.setItem("username", res.data.username);
         navigate("/chat");
       } else {
-        await axios.post("http://localhost:5000/api/auth/register", {
-          username: formData.username,
-          password: formData.password,
-        });
         alert("Registration successful! Please log in.");
         setIsLogin(true);
       }
