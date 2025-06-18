@@ -1,11 +1,12 @@
-// frontend/src/components/Chat.js
+// frontend/src/components/Chat.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 import EmojiPicker from "emoji-picker-react";
 import Avatar from "react-avatar";
 
-const socket = io("http://localhost:5000");
+// ✅ Use environment variable instead of hardcoded localhost
+const socket = io(process.env.REACT_APP_API_URL);
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
@@ -19,7 +20,11 @@ const Chat = () => {
     socket.on("receive_message", (message) => {
       setMessages((prev) => [...prev, message]);
     });
-    return () => socket.disconnect();
+
+    return () => {
+      socket.off("receive_message");
+      socket.disconnect();
+    };
   }, []);
 
   useEffect(() => {
