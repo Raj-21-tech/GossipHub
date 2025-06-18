@@ -1,48 +1,72 @@
-// frontend/src/components/Chat.jsx
+// frontend/src/pages/Chat.jsx
+
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 import EmojiPicker from "emoji-picker-react";
 import Avatar from "react-avatar";
 
-// ✅ Use environment variable instead of hardcoded localhost
-const socket = io(process.env.REACT_APP_API_URL);
+// ✅ Use deployed backend URL or fallback to localhost
+const SOCKET_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [showPicker, setShowPicker] = useState(false);
-  const currentUser = localStorage.getItem("username") || "Guest";
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
 
+  // ✅ Get user and token
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user"));
+  const currentUser = user?.username || "Guest";
+
+  // ✅ Redirect to login if not authenticated
   useEffect(() => {
-    socket.on("receive_message", (message) => {
+    if (!token || !user) {
+      navigate("/");
+    }
+  }, [navigate, token, user]);
+
+  // ✅ Initialize socket with auth (optional but better for future)
+  const socketRef = useRef();
+
+  useEffect(() => {
+    socketRef.current = io(SOCKET_URL, {
+      transports: ["websocket"],
+      withCredentials: true,
+      auth: { token },
+    });
+
+    socketRef.current.on("receive_message", (message) => {
       setMessages((prev) => [...prev, message]);
     });
 
     return () => {
-      socket.off("receive_message");
-      socket.disconnect();
+      socketRef.current.disconnect();
     };
-  }, []);
+  }, [token]);
 
+  // ✅ Scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // ✅ Send message
   const sendMessage = () => {
-    if (newMessage.trim() !== "") {
+    if (newMessage.trim()) {
       const message = { text: newMessage, sender: currentUser };
-      socket.emit("send_message", message);
+      socketRef.current.emit("send_message", message);
       setMessages((prev) => [...prev, message]);
       setNewMessage("");
       setShowPicker(false);
     }
   };
 
+  // ✅ Logout handler
   const handleLogout = () => {
-    localStorage.removeItem("username");
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     navigate("/");
   };
 
@@ -50,8 +74,9 @@ const Chat = () => {
     setShowPicker((prev) => !prev);
   };
 
-  const onEmojiClick = (emojiObject) => {
-    setNewMessage((prev) => prev + emojiObject.emoji);
+  // ✅ Compatible with latest emoji-picker-react
+  const onEmojiClick = (emojiData) => {
+    setNewMessage((prev) => prev + emojiData.emoji);
   };
 
   const toggleDarkMode = () => {
@@ -113,7 +138,7 @@ const Chat = () => {
         </div>
       )}
 
-      {/* Input */}
+      {/* Input Box */}
       <div className="flex items-center p-3 bg-white dark:bg-gray-800 border-t dark:border-gray-700">
         <button onClick={toggleEmojiPicker} className="mr-2 text-2xl">😊</button>
         <input
