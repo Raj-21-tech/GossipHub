@@ -1,38 +1,26 @@
-// backend/routes/auth.js
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 
-// Register
 router.post("/register", async (req, res) => {
-  const { username, password } = req.body;
   try {
-    const existing = await User.findOne({ username });
-    if (existing) {
-      return res.status(400).json({ message: "Username already exists" });
-    }
-
-    const user = new User({ username, password });
+    const { name, email, password } = req.body;
+    const user = new User({ username: name, email, password });
     await user.save();
-    res.status(201).json({ username });
+    res.status(201).json({ message: "User registered" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err.message });
   }
 });
 
-// Login
 router.post("/login", async (req, res) => {
-  const { username, password } = req.body;
   try {
-    const user = await User.findOne({ username, password });
-    if (!user) {
-      return res.status(401).json({ message: "Invalid username or password" });
-    }
-    res.json({ username: user.username });
+    const { email, password } = req.body;
+    const user = await User.findOne({ email, password });
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    res.status(200).json({ username: user.username });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err.message });
   }
 });
 
